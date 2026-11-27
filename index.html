@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Slack vs Mattermost 비교</title>
+    <style>
+      button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]) { min-height: 2rem; }
+
+      :root {
+        --bg: #ffffff;
+        --surface: #f6f6f4;
+        --surface-2: #efefec;
+        --ink: #1c1c1e;
+        --ink-2: #4c4c50;
+        --ink-3: #6d6d72;
+        --line: #e0e0dc;
+        --slack: #4a154b;
+        --slack-soft: #f3e8f3;
+        --mm: #0058cc;
+        --mm-soft: #e6f0fd;
+        --good: #1a7f4b;
+        --mid: #9a6a00;
+        --radius: 10px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #161617;
+          --surface: #1f1f21;
+          --surface-2: #28282b;
+          --ink: #f2f2f0;
+          --ink-2: #c9c9c6;
+          --ink-3: #9a9a97;
+          --line: #333336;
+          --slack: #d9a5da;
+          --slack-soft: #33202f;
+          --mm: #7db3f5;
+          --mm-soft: #1c2c44;
+          --good: #4cc07e;
+          --mid: #d9a83e;
+        }
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        line-height: 1.6;
+        font-size: 16px;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px 64px; }
+
+      header { padding: 40px 0 8px; }
+      h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.01em; }
+      .lede { color: var(--ink-2); font-size: 17px; margin: 0; max-width: 640px; }
+      .lede strong { color: var(--ink); }
+
+      h2 { font-size: 21px; margin: 44px 0 6px; font-weight: 700; letter-spacing: -0.01em; }
+      h2 + .sub { color: var(--ink-3); font-size: 14px; margin: 0 0 16px; }
+      h3 { font-size: 16px; margin: 0 0 8px; font-weight: 700; }
+      p { margin: 0 0 12px; }
+      a { color: var(--mm); }
+      ul { margin: 0; padding-left: 20px; }
+      li { margin-bottom: 6px; }
+      li:last-child { margin-bottom: 0; }
+
+      /* 핵심 차이 카드 */
+      .versus { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 26px; }
+      .v-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; background: var(--surface); }
+      .v-card .name { font-size: 19px; font-weight: 700; margin-bottom: 2px; }
+      .v-card .tag { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+      .v-card p { font-size: 14.5px; color: var(--ink-2); margin: 0; }
+      .v-card.slack .tag { color: var(--slack); }
+      .v-card.mm .tag { color: var(--mm); }
+
+      /* 비교표 — 행은 flex로 둔다. grid 아이템은 자기 열 영역 안에서만 sticky가 걸려
+         속성열이 스크롤을 따라오지 못하므로, flex 아이템 + position: sticky 조합을 쓴다. */
+      .cmp { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+      .cmp-row { display: flex; border-bottom: 1px solid var(--line); }
+      .cmp-row:last-child { border-bottom: none; }
+      .cmp-row > div { padding: 12px 14px; font-size: 14.5px; }
+      .cmp-row .cmp-label { flex: 0 0 150px; }
+      .cmp-row .c-slack, .cmp-row .c-mm { flex: 1 1 0; min-width: 0; }
+      .cmp-head { background: var(--surface-2); font-weight: 700; font-size: 15px; }
+      .cmp-head .c-slack { color: var(--slack); }
+      .cmp-head .c-mm { color: var(--mm); }
+      .cmp-label { font-weight: 600; color: var(--ink-2); background: var(--surface); font-size: 14px; }
+      .cmp-row .c-slack { border-left: 1px solid var(--line); }
+      .cmp-row .c-mm { border-left: 1px solid var(--line); }
+      .win { font-weight: 700; }
+      .note-inline { color: var(--ink-3); font-size: 13px; }
+
+      /* 요금 계산기 */
+      .calc { border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; background: var(--surface); }
+      .calc-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+      .calc-top label { font-weight: 600; font-size: 15px; }
+      .calc-count { font-size: 26px; font-weight: 700; }
+      .calc-count small { font-size: 14px; color: var(--ink-3); font-weight: 400; }
+      input[type="range"] { width: 100%; margin: 10px 0 18px; accent-color: var(--mm); min-height: 2rem; }
+      .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+      .calc-cell { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+      .calc-cell .plan { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+      .calc-cell .plan.slack { color: var(--slack); }
+      .calc-cell .plan.mm { color: var(--mm); }
+      .calc-cell .price { font-size: 20px; font-weight: 700; }
+      .calc-cell .per { font-size: 12.5px; color: var(--ink-3); }
+      .calc-note { font-size: 13px; color: var(--ink-3); margin: 14px 0 0; }
+
+      /* 본문 표 — 실제 <table> 대신 flex div로 짠다.
+         table 셀(td/th)의 position: sticky는 브라우저·웹뷰마다 동작이 달라
+         속성열 고정이 풀리는 경우가 있어, 한눈에 비교표와 같은 flex 구조로 통일한다. */
+      .tbl { font-size: 14.5px; }
+      .tbl-row { display: flex; border-bottom: 1px solid var(--line); }
+      .tbl-row:last-child { border-bottom: none; }
+      .tbl-row > div { padding: 10px 12px; text-align: left; }
+      .tbl-row .t-label { flex: 0 0 120px; font-weight: 600; color: var(--ink-2); background: var(--bg); }
+      .tbl-row .t-cell { flex: 1 1 0; min-width: 0; }
+      .tbl-head { border-bottom: 2px solid var(--line); }
+      .tbl-head > div { font-size: 13px; color: var(--ink-3); font-weight: 600; }
+      .tbl-head .t-label { color: var(--ink-3); }
+      .tbl.pricing .t-label { flex-basis: 160px; font-weight: 400; color: var(--ink); }
+      .tbl.pricing .tbl-head .t-label { font-weight: 600; color: var(--ink-3); }
+      .tbl.pricing .t-cell.price-cell { flex: 0 0 180px; }
+      .tbl.gap .t-label { flex-basis: 150px; }
+      .plans-wrap { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 14px; }
+      .plans-wrap .plans-title { padding: 12px 14px; font-weight: 700; font-size: 15px; background: var(--surface); border-bottom: 1px solid var(--line); }
+      .plans-wrap .plans-title.slack { color: var(--slack); }
+      .plans-wrap .plans-title.mm { color: var(--mm); }
+      .price-cell { font-weight: 700; white-space: nowrap; }
+
+      /* 강점 2열 */
+      .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      .duo-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+      .duo-card h3 { display: flex; align-items: center; gap: 8px; }
+      .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+      .dot.slack { background: var(--slack); }
+      .dot.mm { background: var(--mm); }
+      .duo-card li { font-size: 14.5px; }
+
+      .common-box { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; background: var(--surface); font-size: 14.5px; }
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+      .chip { background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13.5px; }
+
+      /* 봇 섹션 */
+      .bot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      .bot-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+      .bot-card ol { margin: 0; padding-left: 20px; }
+      .bot-card li { font-size: 14.5px; }
+      .bot-card code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+      /* A/B 비교표의 속성열은 .tbl .t-label 규칙을 공유한다 */
+      .level { font-weight: 700; white-space: nowrap; }
+      .level.low { color: var(--good); }
+      .level.high { color: var(--mid); }
+
+      /* 단계 목록 */
+      .steps { display: grid; gap: 10px; counter-reset: step; }
+      .step { display: grid; grid-template-columns: 34px 1fr; gap: 12px; border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px; align-items: start; }
+      .step .num { width: 26px; height: 26px; border-radius: 50%; background: var(--mm-soft); color: var(--mm); font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+      .step p { margin: 0; font-size: 14.5px; }
+      .step p strong { display: block; font-size: 15px; margin-bottom: 2px; }
+
+      /* 선택 가이드 */
+      .guide { display: grid; gap: 10px; }
+      .guide-row { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px; }
+      .guide-row p { margin: 0; font-size: 15px; }
+      .pick { font-weight: 700; font-size: 14px; white-space: nowrap; padding: 6px 14px; border-radius: 999px; }
+      .pick.slack { background: var(--slack-soft); color: var(--slack); }
+      .pick.mm { background: var(--mm-soft); color: var(--mm); }
+
+      /* 용어 */
+      .terms { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      .term { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+      .term h3 { font-size: 15px; }
+      .term p { font-size: 14px; color: var(--ink-2); margin: 0; }
+      .term .direct { color: var(--ink-3); font-size: 13px; display: block; margin-bottom: 4px; }
+
+      /* 탭 */
+      .tabbar {
+        position: sticky; top: 0; z-index: 20;
+        display: flex; flex-wrap: wrap; gap: 8px;
+        margin: 26px -20px 4px; padding: 12px 20px;
+        background: var(--bg);
+        border-bottom: 1px solid var(--line);
+      }
+      .tab-btn {
+        appearance: none; cursor: pointer;
+        border: 1px solid var(--line); border-radius: 999px;
+        background: var(--surface); color: var(--ink-2);
+        font: inherit; font-size: 14.5px; font-weight: 600;
+        padding: 8px 16px; min-height: 2.5rem; line-height: 1.3;
+      }
+      .tab-btn:hover { color: var(--ink); border-color: var(--ink-3); }
+      .tab-btn:focus-visible { outline: 2px solid var(--mm); outline-offset: 2px; }
+      .tab-btn[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+      .tab-panel[hidden] { display: none; }
+      .tab-panel > h2:first-child { margin-top: 28px; }
+
+      /* 탭 그룹 — 두 문서를 탭 바에서부터 구분 */
+      .tab-group { display: flex; flex-direction: column; gap: 6px; }
+      .tab-group-label { font-size: 12.5px; font-weight: 700; color: var(--ink-3); padding-left: 2px; }
+      .tab-group:has(.tab-btn[aria-selected="true"]) .tab-group-label { color: var(--ink); }
+      .tab-group-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+      .tab-sep { width: 1px; background: var(--line); margin: 4px 6px; flex: none; }
+
+      /* 모바일 표 가로 스크롤 안내 (모바일에서만 표시) */
+      .scroll-hint { display: none; font-size: 12.5px; color: var(--ink-3); margin: 0 0 6px; text-align: right; }
+
+      footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-3); }
+      footer ul { padding-left: 18px; }
+      footer li { margin-bottom: 3px; }
+
+      @media (max-width: 680px) {
+        h1 { font-size: 25px; }
+        .versus, .duo, .bot-grid, .terms { grid-template-columns: 1fr; }
+        .calc-grid { grid-template-columns: 1fr 1fr; }
+        .guide-row { grid-template-columns: 1fr; gap: 8px; }
+        .pick { justify-self: start; }
+        .tab-group { width: 100%; }
+        .tab-sep { width: 100%; height: 1px; margin: 6px 0; }
+        .scroll-hint { display: block; }
+
+        /* 표: 중첩 스크롤 제거 — 표 높이를 제한하지 않아 세로 스크롤은 페이지가 맡고,
+           래퍼는 가로 스크롤만 담당한다.
+           속성열(맨 왼쪽 항목 열) 고정: 옆으로 밀어도 항목 열이 왼쪽에 남아
+           지금 보는 숫자가 무엇에 대한 것인지 계속 알 수 있게 한다.
+           - 한눈에 비교표(.cmp): 행에 min-width를 줘서 가로 스크롤이 실제로 생기게 하고,
+             속성열은 flex-basis 96px + sticky로 고정한다. (flex 행이라 sticky가 행 전체 폭을 기준으로 동작)
+           - 본문 표(.tbl): flex 행에 최소 너비(4열 표는 720px, 나머지는 500px)를 줘서
+             가로 스크롤이 생기게 하고, 속성열(.t-label)을 sticky로 고정한다.
+             실제 <table> 셀 sticky는 웹뷰마다 동작이 달라 쓰지 않는다. */
+        .cmp, .plans-wrap {
+          overflow-x: auto; overflow-y: visible;
+          max-height: none;
+          overscroll-behavior-x: contain;
+          -webkit-overflow-scrolling: touch;
+        }
+        .cmp-row { min-width: 560px; }
+        .cmp-row .cmp-label { flex-basis: 96px; }
+        .cmp-row > div { padding: 10px 8px; font-size: 13.5px; overflow-wrap: break-word; }
+        .cmp-label { font-size: 13px; }
+        .cmp-row .cmp-label { position: sticky; left: 0; z-index: 2; box-shadow: 12px 0 14px -12px rgba(0, 0, 0, 0.45); }
+        .cmp-head { background: var(--surface-2); }
+        .cmp-head > div { background: var(--surface-2); }
+        .cmp-head .cmp-label { z-index: 4; }
+        .plans-wrap .plans-title { position: sticky; left: 0; }
+        .tbl-row { min-width: 500px; }
+        .tbl.gap .tbl-row { min-width: 720px; }
+        .tbl-row > div { padding: 9px 10px; font-size: 13.5px; }
+        .tbl-row .t-label { flex-basis: 96px; position: sticky; left: 0; z-index: 2; box-shadow: 12px 0 14px -12px rgba(0, 0, 0, 0.45); }
+        .tbl.pricing .tbl-row .t-label { flex-basis: 110px; }
+        .tbl.gap .tbl-row .t-label { flex-basis: 110px; }
+        .tbl.pricing .t-cell.price-cell { flex-basis: 130px; }
+        .tbl-head .t-label { z-index: 4; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Slack vs Mattermost 비교</h1>
+        <p class="lede">겉보기엔 같은 팀 메신저지만 운영 철학이 정반대입니다. <strong>Slack은 완성형 클라우드 서비스</strong>를 빌려 쓰는 방식이고, <strong>Mattermost는 오픈소스를 내 서버에 직접 설치</strong>하는 방식입니다. 이 차이가 가격, 데이터 통제, 운영 부담의 차이로 이어집니다.</p>
+      </header>
+
+      <nav class="tabbar" aria-label="비교 주제 선택">
+        <div class="tab-group">
+          <span class="tab-group-label" id="tg-products">Slack vs Mattermost 비교</span>
+          <div class="tab-group-btns" role="tablist" aria-labelledby="tg-products">
+            <button type="button" class="tab-btn" role="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" data-panel="panel-overview">한눈에 비교</button>
+            <button type="button" class="tab-btn" role="tab" id="tab-pricing" aria-controls="panel-pricing" aria-selected="false" tabindex="-1" data-panel="panel-pricing">요금제·계산기</button>
+            <button type="button" class="tab-btn" role="tab" id="tab-features" aria-controls="panel-features" aria-selected="false" tabindex="-1" data-panel="panel-features">기능·봇·선택 가이드</button>
+            <button type="button" class="tab-btn" role="tab" id="tab-gap" aria-controls="panel-gap" aria-selected="false" tabindex="-1" data-panel="panel-gap">격차 극복</button>
+          </div>
+        </div>
+        <div class="tab-sep" aria-hidden="true"></div>
+        <div class="tab-group">
+          <span class="tab-group-label" id="tg-adopt">자체 개발 vs Mattermost 도입 비교</span>
+          <div class="tab-group-btns" role="tablist" aria-labelledby="tg-adopt">
+            <button type="button" class="tab-btn" role="tab" id="tab-build" aria-controls="panel-build" aria-selected="false" tabindex="-1" data-panel="panel-build">자체 개발 vs 도입</button>
+            <button type="button" class="tab-btn" role="tab" id="tab-jira" aria-controls="panel-jira" aria-selected="false" tabindex="-1" data-panel="panel-jira">Jira·Confluence 연동</button>
+          </div>
+        </div>
+        <div class="tab-sep" aria-hidden="true"></div>
+        <div class="tab-group">
+          <span class="tab-group-label" id="tg-common">공통</span>
+          <div class="tab-group-btns" role="tablist" aria-labelledby="tg-common">
+            <button type="button" class="tab-btn" role="tab" id="tab-terms" aria-controls="panel-terms" aria-selected="false" tabindex="-1" data-panel="panel-terms">용어 풀이</button>
+          </div>
+        </div>
+      </nav>
+
+      <section class="tab-panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+      <div class="versus">
+        <div class="v-card slack">
+          <div class="name">Slack</div>
+          <div class="tag">클라우드 SaaS · Salesforce 운영</div>
+          <p>가입하면 바로 시작할 수 있는 완성형 서비스. 서버 운영은 전부 Slack이 맡고, 사용자는 인원수만큼 요금을 냅니다. 앱 연동 생태계와 외부 협업 기능이 업계 표준 수준입니다.</p>
+        </div>
+        <div class="v-card mm">
+          <div class="name">Mattermost</div>
+          <div class="tag">오픈소스 · 자체 호스팅 중심</div>
+          <p>소스코드가 공개된 오픈소스를 내 서버에 설치해 운영하는 방식. 메시지와 파일, 데이터베이스가 전부 내 인프라 안에 머물러, 망 분리와 데이터 통제가 필요한 조직에서 많이 씁니다.</p>
+        </div>
+      </div>
+
+      <h2>한눈에 비교</h2>
+      <p class="sub">2026년 11월 기준, 각 사 공식 요금·제품 페이지와 공개 자료를 확인한 내용입니다.</p>
+      <p class="scroll-hint" aria-hidden="true">↔ 좌우로 밀어 표 전체를 볼 수 있습니다</p>
+      <div class="cmp" role="table" aria-label="Slack과 Mattermost 비교표">
+        <div class="cmp-row cmp-head">
+          <div class="cmp-label">항목</div>
+          <div class="c-slack">Slack</div>
+          <div class="c-mm">Mattermost</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">운영 방식</div>
+          <div class="c-slack">클라우드 전용. Salesforce가 서버를 운영</div>
+          <div class="c-mm">자체 호스팅이 기본, 클라우드판도 제공</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">오픈소스</div>
+          <div class="c-slack">아니요 (비공개 상용 소프트웨어)</div>
+          <div class="c-mm"><span class="win">예</span> — Team Edition은 MIT 라이선스 오픈소스</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">시작 난이도</div>
+          <div class="c-slack"><span class="win">가입 후 바로 사용</span> 가능</div>
+          <div class="c-mm">서버 설치·업데이트·백업을 직접 운영해야 함</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">무료판 기록 보관</div>
+          <div class="c-slack">메시지 기록 <span class="win">90일</span>까지만 열람·검색, 1년 지난 데이터는 삭제. 앱 연동 10개 제한</div>
+          <div class="c-mm">Team Edition은 기록 제한 없음 (내 서버 저장 공간만큼). 단 v11부터 250명 상한</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">대표 유료 요금</div>
+          <div class="c-slack">Pro 인당 월 $7.25, Business+ $15 (연간 결제 기준)</div>
+          <div class="c-mm">Professional 인당 월 $10 수준, Enterprise $20 수준 (연간 선불, 현재는 견적형 판매 병행)</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">앱·연동 생태계</div>
+          <div class="c-slack"><span class="win">2,400개 이상</span>의 앱 마켓, 사실상 업계 표준</div>
+          <div class="c-mm">600개 수준. 대신 Slack 호환 Webhook을 지원해 기존 연동을 옮기기 쉬움</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">음성·화상</div>
+          <div class="c-slack"><span class="win">Huddles(가벼운 음성 대화)</span>, 클립, 화면 공유가 매끄러움</div>
+          <div class="c-mm">Calls로 통화·화면 공유 가능. 무료 Entry는 통화 40분 제한</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">데이터 통제</div>
+          <div class="c-slack">데이터가 Slack(Salesforce/AWS) 서버에 저장됨</div>
+          <div class="c-mm"><span class="win">메시지·파일·DB 전부 내 서버</span>에 보관. 데이터 거주지 통제가 쉬움</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">보안·규정 대응</div>
+          <div class="c-slack">Business+ 이상에서 SSO, 감사 로그, 전체 내보내기 등 강화</div>
+          <div class="c-mm"><span class="win">망 분리(에어갭) 환경 구축 가능</span>. 군·금융·공공 도입 사례가 많은 이유</div>
+        </div>
+        <div class="cmp-row">
+          <div class="cmp-label">커스터마이징</div>
+          <div class="c-slack">제공되는 기능과 API 범위 안에서만 가능</div>
+          <div class="c-mm"><span class="win">소스코드 수정 가능</span>, 플러그인을 Go/React로 자체 제작 가능</div>
+        </div>
+      </div>
+      </section>
+
+      <section class="tab-panel" id="panel-pricing" role="tabpanel" aria-labelledby="tab-pricing" tabindex="0" hidden>
+      <h2>요금제 비교</h2>
+      <p class="sub">두 서비스 모두 유료판은 인당 과금입니다. 차이는 무료판의 성격과, 자체 호스팅 시 서버 비용이 따로 든다는 점입니다.</p>
+
+      <p class="scroll-hint" aria-hidden="true">↔ 좌우로 밀어 표 전체를 볼 수 있습니다</p>
+      <div class="plans-wrap">
+        <div class="plans-title slack">Slack 요금제 (인당 월 요금, USD)</div>
+        <div class="tbl pricing" role="table" aria-label="Slack 요금제 표">
+          <div class="tbl-row tbl-head"><div class="t-label">플랜</div><div class="t-cell price-cell">가격</div><div class="t-cell">핵심 내용</div></div>
+          <div class="tbl-row"><div class="t-label">Free</div><div class="t-cell price-cell">$0</div><div class="t-cell">메시지 기록 90일, 앱 연동 10개, 1:1 Huddles</div></div>
+          <div class="tbl-row"><div class="t-label">Pro</div><div class="t-cell price-cell">$7.25 <span class="note-inline">(월 결제 $8.75)</span></div><div class="t-cell">기록 무제한, 앱 무제한, 그룹 Huddles, 그룹 외부 메시지</div></div>
+          <div class="tbl-row"><div class="t-label">Business+</div><div class="t-cell price-cell">$15 <span class="note-inline">(월 결제 $18)</span></div><div class="t-cell">Pro + SAML SSO, SCIM, 전체 메시지 내보내기, 고급 AI 기능</div></div>
+          <div class="tbl-row"><div class="t-label">Enterprise+</div><div class="t-cell price-cell">영업 문의</div><div class="t-cell">다중 워크스페이스, 감사 로그, 데이터 손실 방지(DLP) 등</div></div>
+        </div>
+      </div>
+
+      <p class="scroll-hint" aria-hidden="true">↔ 좌우로 밀어 표 전체를 볼 수 있습니다</p>
+      <div class="plans-wrap">
+        <div class="plans-title mm">Mattermost 요금제 (인당 월 요금, USD)</div>
+        <div class="tbl pricing" role="table" aria-label="Mattermost 요금제 표">
+          <div class="tbl-row tbl-head"><div class="t-label">플랜</div><div class="t-cell price-cell">가격</div><div class="t-cell">핵심 내용</div></div>
+          <div class="tbl-row"><div class="t-label">Team Edition</div><div class="t-cell price-cell">$0</div><div class="t-cell">오픈소스, 자체 호스팅 전용. 250명까지, 핵심 메시징 기능 제공. SSO 등 고급 관리 기능 없음</div></div>
+          <div class="tbl-row"><div class="t-label">Entry</div><div class="t-cell price-cell">$0</div><div class="t-cell">상용 무료판. 전체 기능을 쓰되 사용량 상한 적용 (기록 10,000개 메시지, 통화 40분 등)</div></div>
+          <div class="tbl-row"><div class="t-label">Professional</div><div class="t-cell price-cell">$10 수준</div><div class="t-cell">SSO, AD/LDAP 연동, 게스트 계정, 그룹 통화. 250명 상한, 연간 선불·견적형 판매</div></div>
+          <div class="tbl-row"><div class="t-label">Enterprise</div><div class="t-cell price-cell">$20 수준</div><div class="t-cell">고가용성 클러스터, 컴플라이언스 내보내기, 법적 보존(legal hold), 데이터 보존 정책</div></div>
+          <div class="tbl-row"><div class="t-label">Enterprise Advanced</div><div class="t-cell price-cell">영업 문의</div><div class="t-cell">국방·인프라급 최고 보안 등급 배포용</div></div>
+        </div>
+      </div>
+
+      <div class="calc">
+        <div class="calc-top">
+          <label for="teamSize">팀 규모별 연간 라이선스 비용 계산</label>
+          <span class="calc-count"><span id="countLabel">20</span><small> 명 기준</small></span>
+        </div>
+        <input type="range" id="teamSize" min="5" max="500" step="5" value="20" aria-label="팀 인원수" />
+        <div class="calc-grid">
+          <div class="calc-cell">
+            <div class="plan slack">Slack Pro</div>
+            <div class="price" id="costSlackPro">$1,740</div>
+            <div class="per">연간 · 인당 월 $7.25</div>
+          </div>
+          <div class="calc-cell">
+            <div class="plan slack">Slack Business+</div>
+            <div class="price" id="costSlackBiz">$3,600</div>
+            <div class="per">연간 · 인당 월 $15</div>
+          </div>
+          <div class="calc-cell">
+            <div class="plan mm">Mattermost Professional</div>
+            <div class="price" id="costMmPro">$2,400</div>
+            <div class="per">연간 · 인당 월 $10 수준</div>
+          </div>
+          <div class="calc-cell">
+            <div class="plan mm">Mattermost Team Edition</div>
+            <div class="price">$0</div>
+            <div class="per">라이선스 무료 · 서버 비용 별도</div>
+          </div>
+        </div>
+        <p class="calc-note">Mattermost 자체 호스팅은 라이선스와 별개로 서버 비용이 고정으로 듭니다. 소규모 기준 VPS 월 $10~20 수준이면 충분한 경우가 많아, 무료 Team Edition으로 운영하면 연간 비용은 서버비 수백 달러 선에서 고정됩니다. 대신 설치·업데이트·백업·장애 대응에 드는 운영 인력의 시간이 실질적인 비용입니다. Slack은 반대로 운영 부담이 0이지만 인원이 늘수록 비용이 정비례로 커집니다.</p>
+      </div>
+      </section>
+
+      <section class="tab-panel" id="panel-features" role="tabpanel" aria-labelledby="tab-features" tabindex="0" hidden>
+      <h2>기능 비교</h2>
+      <p class="sub">기본 협업 기능은 두 서비스가 거의 같습니다. 차이는 그 위에 얹히는 부가 기능과 확장 방식에서 갈립니다.</p>
+      <div class="common-box">
+        <strong>둘 다 되는 것</strong>
+        <div class="chips">
+          <span class="chip">공개·비공개 채널</span>
+          <span class="chip">스레드 답글</span>
+          <span class="chip">DM·그룹 메시지</span>
+          <span class="chip">멘션·이모지 반응</span>
+          <span class="chip">파일 공유</span>
+          <span class="chip">전체 검색</span>
+          <span class="chip">슬래시 명령어</span>
+          <span class="chip">Webhook</span>
+          <span class="chip">봇 계정</span>
+          <span class="chip">모바일·데스크톱 앱</span>
+        </div>
+      </div>
+      <div style="height:14px"></div>
+      <div class="duo">
+        <div class="duo-card">
+          <h3><span class="dot slack"></span>Slack이 앞서는 것</h3>
+          <ul>
+            <li><strong>Slack Connect</strong> — 다른 회사와 채널을 공유하는 외부 협업. 상대 조직도 Slack을 쓰는 환경에서 강력합니다.</li>
+            <li><strong>Workflow Builder</strong> — 코딩 없이 폼과 자동화 흐름을 만드는 도구.</li>
+            <li><strong>Huddles·클립·Canvas</strong> — 가벼운 음성 대화, 영상 클립, 문서 협업이 기본 탑재되어 완성도가 높습니다.</li>
+            <li><strong>Slack AI</strong> — 대화 요약, AI 검색, 일일 recap 등 AI 부가 기능 (상위 플랜·애드온).</li>
+            <li><strong>앱 생태계</strong> — 2,400개 이상의 연동 앱으로 대부분의 SaaS와 바로 연결됩니다.</li>
+          </ul>
+        </div>
+        <div class="duo-card">
+          <h3><span class="dot mm"></span>Mattermost가 앞서는 것</h3>
+          <ul>
+            <li><strong>무료인데 기록 무제한</strong> — Team Edition은 메시지 보관 기간 제한이 없고 전체 검색이 됩니다.</li>
+            <li><strong>데이터 주권</strong> — DB를 직접 쿼리할 수 있어 감사·백업·마이그레이션이 자유롭습니다. Slack에서 동등한 통제를 하려면 최상위 플랜이 필요합니다.</li>
+            <li><strong>소스 수정·자체 플러그인</strong> — 필요한 기능을 직접 만들어 붙일 수 있습니다.</li>
+            <li><strong>망 분리 배포</strong> — 인터넷이 차단된 폐쇄망(에어갭) 환경에서도 구축·운영할 수 있습니다.</li>
+            <li><strong>Playbooks·Boards</strong> — 인시던트 대응 절차와 칸반 보드가 내장되어 운영·개발 팀 워크플로에 강합니다.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h2>봇·자동화</h2>
+      <p class="sub">두 서비스 모두 봇이 공식 기능입니다. 다만 봇을 만드는 방식이 다릅니다.</p>
+      <div class="bot-grid">
+        <div class="bot-card">
+          <h3>Slack 봇</h3>
+          <ol>
+            <li>api.slack.com에서 앱을 별도로 생성</li>
+            <li>필요한 권한(scope)을 신청·승인받아 워크스페이스에 설치</li>
+            <li>발급된 토큰으로 Web API 호출, 이벤트 구독으로 메시지 수신</li>
+          </ol>
+          <p style="font-size:14.5px; margin-top:10px;">앱 단위로 권한을 세밀하게 나눌 수 있고 마켓에 공개 배포도 가능하지만, 설정 단계가 많습니다.</p>
+        </div>
+        <div class="bot-card">
+          <h3>Mattermost 봇</h3>
+          <ol>
+            <li>시스템 관리자가 System Console에서 봇 계정 생성을 활성화</li>
+            <li>Integrations 메뉴에서 봇 계정을 만들고, <strong>한 번만 표시되는 토큰</strong>을 복사해 보관</li>
+            <li>봇을 팀·채널에 초대하면 바로 사용 가능</li>
+          </ol>
+          <p style="font-size:14.5px; margin-top:10px;">서버 안에서 계정이 발급되는 구조라 절차가 단순합니다. REST API(<code>POST /api/v4/bots</code>), CLI 전환, 플러그인의 <code>EnsureBot</code>으로도 만들 수 있습니다. 공통 주의점: 봇에 관리자 권한을 주면 토큰 유출 시 피해가 커지므로, 일반 멤버 권한 + 필요한 채널만 초대하는 것이 원칙입니다.</p>
+        </div>
+      </div>
+
+      <h2>어떤 경우에 어느 쪽인가</h2>
+      <p class="sub">정답은 조직의 조건에 따라 갈립니다. 대표적인 판단 기준입니다.</p>
+      <div class="guide">
+        <div class="guide-row">
+          <p>도입 속도가 중요하고, 서버를 운영할 인력이 없다</p>
+          <span class="pick slack">Slack</span>
+        </div>
+        <div class="guide-row">
+          <p>다른 회사·외부 파트너와 채널을 공유하며 협업하는 일이 많다</p>
+          <span class="pick slack">Slack</span>
+        </div>
+        <div class="guide-row">
+          <p>다양한 SaaS 도구와의 연동을 최대한 활용하고 싶다</p>
+          <span class="pick slack">Slack</span>
+        </div>
+        <div class="guide-row">
+          <p>메시지 데이터가 외부 서버에 있으면 안 되는 보안·규정 요구가 있다</p>
+          <span class="pick mm">Mattermost</span>
+        </div>
+        <div class="guide-row">
+          <p>폐쇄망(망 분리) 환경이나 자체 데이터센터 안에서만 운영해야 한다</p>
+          <span class="pick mm">Mattermost</span>
+        </div>
+        <div class="guide-row">
+          <p>무료로 쓰면서도 메시지 기록을 기간 제한 없이 보관하고 싶다</p>
+          <span class="pick mm">Mattermost</span>
+        </div>
+        <div class="guide-row">
+          <p>인원이 많아 인당 과금이 부담되고, 서버 운영 역량은 있다</p>
+          <span class="pick mm">Mattermost</span>
+        </div>
+        <div class="guide-row">
+          <p>필요한 기능을 직접 개발해서 붙이는 등 깊은 커스터마이징이 필요하다</p>
+          <span class="pick mm">Mattermost</span>
+        </div>
+      </div>
+
+      </section>
+
+      <section class="tab-panel" id="panel-build" role="tabpanel" aria-labelledby="tab-build" tabindex="0" hidden>
+      <h2>Slack 클론 자체 개발 vs Mattermost 사용</h2>
+      <p class="sub">Slack을 쓰지 않는다면 선택지는 두 가지로 갈립니다. 기능과 사용 방식을 참고해 새로 만드는 것(Build)과, 이미 만들어진 오픈소스를 가져다 쓰는 것(Buy/Borrow)입니다. 전제 하나: 자체 개발은 Slack의 코드·아이콘·상표·UI 자산을 그대로 베끼는 게 아니라 기능을 참고해 새로 구현하는 것을 뜻합니다. 자산을 그대로 가져오면 지식재산권 문제가 생깁니다.</p>
+
+      <p class="scroll-hint" aria-hidden="true">↔ 좌우로 밀어 표 전체를 볼 수 있습니다</p>
+      <div class="plans-wrap">
+        <div class="plans-title">큰 그림</div>
+        <div class="tbl" role="table" aria-label="자체 개발과 Mattermost 사용 큰 그림 비교표">
+          <div class="tbl-row tbl-head"><div class="t-label">구분</div><div class="t-cell">A. Slack 클론 자체 개발</div><div class="t-cell">B. Mattermost 사용</div></div>
+          <div class="tbl-row"><div class="t-label">출발점</div><div class="t-cell">빈 저장소에서 시작</div><div class="t-cell">완성된 서버·웹·모바일·데스크톱 앱이 이미 있음</div></div>
+          <div class="tbl-row"><div class="t-label">개발 범위</div><div class="t-cell">채팅 전체를 직접 설계·구현</div><div class="t-cell">설치가 기본, 필요하면 플러그인·봇만 추가</div></div>
+          <div class="tbl-row"><div class="t-label">통제권</div><div class="t-cell">100%. 모든 기능을 원하는 대로</div><div class="t-cell">높음. 단, 코어 구조는 Mattermost 방식을 따름</div></div>
+          <div class="tbl-row"><div class="t-label">차별화</div><div class="t-cell">완전히 다른 경험을 만들 수 있음</div><div class="t-cell">플러그인 범위 안에서는 가능, 코어를 바꾸려면 포크 필요</div></div>
+        </div>
+      </div>
+
+      <h3 style="margin: 22px 0 8px;">초기 속도와 비용</h3>
+      <ul>
+        <li><strong>A</strong> — 생각보다 훨씬 무겁습니다. 실시간 채널, 스레드, 검색, 권한, 파일, 알림이 전부 연결돼 있기 때문입니다. 가장 어려운 부분으로 대규모 WebSocket 연결, 메시지 전파 보장, 수년치 검색 인덱싱이 꼽히며, 복잡도 8/10에 숙련된 3인 팀 기준 4~6개월이 상용 수준 시작점의 기준이고, 기업용 수준까지 가면 기간은 훨씬 늘어납니다.</li>
+        <li><strong>B</strong> — 서버 설치와 설정만으로 바로 서비스가 뜹니다. 라이선스 비용은 무료판 기준 0원이고 비용은 서버 운영으로 바뀝니다. 대신 DB, 이메일, 저장소, 백업, 업그레이드, 가동 시간 관리는 직접 해야 합니다.</li>
+      </ul>
+
+      <h3 style="margin: 22px 0 8px;">숨은 난이도 — 겉으로 안 보이는 부분</h3>
+      <p style="font-size:14.5px;">채팅 앱은 화면이 단순해 보여서 쉽게 보이지만, 어려운 건 아래쪽입니다. A는 다음을 전부 직접 해결해야 하고, B는 이걸 이미 해결한 코드를 가져옵니다. 특히 검색, 권한, 모바일 앱, 푸시를 직접 만들지 않아도 되는 게 가장 큽니다.</p>
+      <div class="chips" style="margin-bottom: 6px;">
+        <span class="chip">실시간 메시지 전파</span>
+        <span class="chip">읽음·입력 중·접속 상태 표시</span>
+        <span class="chip">끊긴 연결 복구와 중복 방지</span>
+        <span class="chip">대용량 전체 검색</span>
+        <span class="chip">워크스페이스-채널-사용자 권한 구조</span>
+        <span class="chip">모바일 푸시</span>
+        <span class="chip">파일 저장·미리보기</span>
+        <span class="chip">스팸·보안</span>
+        <span class="chip">데이터 보존·내보내기</span>
+      </div>
+
+      <h3 style="margin: 22px 0 8px;">커스터마이징 자유도</h3>
+      <ul>
+        <li><strong>A</strong> — 제한이 없습니다. 데이터 구조부터 UI까지 전부 바꿀 수 있습니다. 대신 바꾼 만큼 전부 본인이 유지해야 합니다.</li>
+        <li><strong>B</strong> — 단계가 나뉩니다. 가벼운 순서대로 Webhook·슬래시 명령어 → REST API·봇 → 서버/클라이언트 플러그인 → 소스 포크입니다. 플러그인만으로도 UI에 버튼·사이드바·전용 화면을 붙이고 서버 API를 확장할 수 있어, 포크 없이 대부분의 확장이 가능합니다.</li>
+        <li><strong>포크는 최후의 수단</strong> — 원하는 대로 다 바꿀 수 있지만 어렵고 자원이 많이 들며 실제로 하는 경우는 드뭅니다. 포크하면 이후 공식 업데이트를 따라가기가 급격히 힘들어지고, 원본 라이선스 조건을 그대로 따라야 합니다.</li>
+      </ul>
+
+      <h3 style="margin: 22px 0 8px;">운영·안정성·법적 리스크</h3>
+      <ul>
+        <li><strong>운영과 유지보수</strong> — A는 버그, 보안 패치, OS·DB 업그레이드, 스케일링, 장애 대응이 전부 개발팀 몫이고 기능을 만든 뒤에도 매년 유지 비용이 계속 발생합니다. B는 코어 보안 패치와 기능 개선을 Mattermost 커뮤니티와 본사가 계속 제공하고, 운영자는 자기 서버의 업데이트·백업·장애만 챙기면 됩니다. 단, 무료판에 없는 SSO, 고급 감사, 규정 준수 내보내기 같은 기업 기능은 유료판 영역입니다.</li>
+        <li><strong>안정성과 확장성</strong> — A는 처음에는 빠르게 만들 수 있어도 동시 접속자와 메시지가 늘 때 검증이 안 돼 있고, 규모가 커진 뒤 구조를 바꾸는 게 가장 비쌉니다. B는 이미 대규모 환경에서 쓰인 구조라 검증이 돼 있지만 구조가 고정돼 있어 아주 특이한 규모의 요구에는 안 맞을 수 있습니다.</li>
+        <li><strong>법적·라이선스</strong> — A는 기능 아이디어를 참고하는 건 가능하지만 구현 과정에서 Slack의 자산이나 표현을 그대로 가져오지 않도록 클린룸 방식으로 개발해야 안전합니다. B는 오픈소스 라이선스 범위 안에서 상업적 사용·수정·자체 호스팅이 허용되지만, 상표는 별도라 Mattermost 이름을 그대로 브랜드로 내세우는 건 제한됩니다.</li>
+      </ul>
+
+      <div class="duo" style="margin-top: 18px;">
+        <div class="duo-card">
+          <h3>Mattermost 사용이 맞는 경우</h3>
+          <ul>
+            <li>메신저 자체가 목적이 아니라, 업무나 다른 서비스를 위한 수단일 때</li>
+            <li>빨리 출시해야 하거나 개발 인력이 적을 때</li>
+            <li>필요한 차별점이 봇, 플러그인, 연동 수준에서 해결될 때</li>
+            <li>보안·자체 호스팅이 필요하지만 코어까지 만들 여력은 없을 때</li>
+          </ul>
+        </div>
+        <div class="duo-card">
+          <h3>자체 개발이 맞는 경우</h3>
+          <ul>
+            <li>메신저 자체가 판매할 제품의 핵심일 때</li>
+            <li>기존 메신저와 완전히 다른 상호작용이나 데이터 구조가 필요할 때</li>
+            <li>장기적으로 대규모 인력과 운영 조직을 유지할 수 있을 때</li>
+            <li>Mattermost의 구조나 라이선스 조건이 사업 모델과 정면으로 충돌할 때</li>
+          </ul>
+        </div>
+      </div>
+      <div class="common-box" style="margin-top: 14px;">
+        <strong>중간 지대 — 가장 현실적인 절충안.</strong> 대부분의 경우는 Mattermost 코어는 그대로 두고 플러그인과 봇으로만 확장하는 방식이 균형이 좋습니다. 코어를 건드리지 않으면 공식 업데이트를 계속 따라갈 수 있고, 필요한 차별점은 위에 얹을 수 있기 때문입니다. 포크는 그 방식으로 해결이 안 될 때만 검토하는 단계입니다. 한 줄로 요약하면, <strong>채팅을 '만드는 것'이 사업이면 자체 개발, 채팅을 '쓰는 것'이 목적이면 Mattermost</strong>입니다.
+      </div>
+
+      </section>
+
+      <section class="tab-panel" id="panel-jira" role="tabpanel" aria-labelledby="tab-jira" tabindex="0" hidden>
+      <h2>Jira·Confluence 연동 비교</h2>
+      <p class="sub">연동으로 좁혀서 보면 앞선 비교와 결론이 조금 달라집니다. Jira는 Mattermost 쪽 우세가 아주 크고, Confluence는 그 우세가 훨씬 작습니다.</p>
+
+      <p class="scroll-hint" aria-hidden="true">↔ 좌우로 밀어 표 전체를 볼 수 있습니다</p>
+      <div class="plans-wrap">
+        <div class="plans-title mm">Jira 연동</div>
+        <div class="tbl" role="table" aria-label="Jira 연동 비교표">
+          <div class="tbl-row tbl-head"><div class="t-label">항목</div><div class="t-cell">A. 자체 개발</div><div class="t-cell">B. Mattermost 사용</div></div>
+          <div class="tbl-row"><div class="t-label">시작 상태</div><div class="t-cell">연동이 0에서 시작. 전부 직접 구현</div><div class="t-cell">공식 Jira 플러그인이 이미 있음. 마켓플레이스에서 설치</div></div>
+          <div class="tbl-row"><div class="t-label">알림 받기</div><div class="t-cell">Jira Webhook을 받아 채널에 뿌리는 서버를 직접 개발</div><div class="t-cell">채널 구독 기능 내장. 이슈 생성·수정·재오픈·해결·담당자 변경·댓글 이벤트를 골라서 구독</div></div>
+          <div class="tbl-row"><div class="t-label">채팅에서 액션</div><div class="t-cell">이슈 생성 폼, 상태 변경, 담당자 지정 UI를 직접 설계·구현</div><div class="t-cell">이미 제공됨. 메시지에서 바로 이슈 생성, 기존 이슈에 메시지 첨부, 상태 전이, 담당자 지정</div></div>
+          <div class="tbl-row"><div class="t-label">개인 알림</div><div class="t-cell">멘션·배정 알림 로직을 직접 개발</div><div class="t-cell">JirBot이 개인별로 멘션·배정 이슈를 알려주는 구조가 있음</div></div>
+          <div class="tbl-row"><div class="t-label">양방향성</div><div class="t-cell">구현한 만큼만 됨</div><div class="t-cell">양방향이 기본. Jira에서 알림이 오고, Mattermost에서 Jira 이슈를 관리</div></div>
+        </div>
+      </div>
+      <p style="font-size:14.5px;">Mattermost 공식 문서 기준으로 Jira Core와 Jira Software의 Server, Data Center, Cloud를 지원합니다. 단, B에도 조건이 있습니다. Jira Service Management는 지원하지 않고, Jira 인스턴스를 여러 개 연결하려면 Mattermost 상용 라이선스가 필요하며, 동작 방식이 플러그인이 정한 방식이라 구독 단위나 알림 모양을 완전히 바꾸려면 플러그인을 손봐야 합니다.</p>
+
+      <p class="scroll-hint" aria-hidden="true">↔ 좌우로 밀어 표 전체를 볼 수 있습니다</p>
+      <div class="plans-wrap">
+        <div class="plans-title mm">Confluence 연동 — Jira와 다릅니다</div>
+        <div class="tbl" role="table" aria-label="Confluence 연동 비교표">
+          <div class="tbl-row tbl-head"><div class="t-label">항목</div><div class="t-cell">A. 자체 개발</div><div class="t-cell">B. Mattermost 사용</div></div>
+          <div class="tbl-row"><div class="t-label">알림 받기</div><div class="t-cell">Webhook 수신 서버를 직접 개발</div><div class="t-cell">공식 플러그인이 있음. 페이지·스페이스 활동을 실시간으로 채널에 알려주고 채널에서 구독을 관리</div></div>
+          <div class="tbl-row"><div class="t-label">그 이상의 액션</div><div class="t-cell">만드는 만큼 가능</div><div class="t-cell">플러그인의 중심은 <strong>알림</strong>. Atlassian 소개 페이지도 Confluence는 "알림 구독 관리와 채널 통지"로 설명</div></div>
+          <div class="tbl-row"><div class="t-label">페이지 검색·미리보기·생성</div><div class="t-cell">직접 구현하면 채팅 안에서 페이지 검색, 내용 삽입, 새 페이지 생성까지 설계 가능</div><div class="t-cell">기본 플러그인만으로는 이 수준을 기대하기 어렵고, 필요하면 별도 플러그인이나 봇을 추가로 개발해야 함</div></div>
+        </div>
+      </div>
+      <p style="font-size:14.5px;">즉 Confluence는 B를 써도 "알림은 공짜로 얻지만, 깊은 연동은 결국 직접 개발"이라는 구간이 남습니다. Jira만큼 격차가 크지 않은 이유입니다.</p>
+
+      <h3 style="margin: 22px 0 8px;">자체 개발(A)에서 연동이 무거운 진짜 이유</h3>
+      <p style="font-size:14.5px;">Atlassian 연동 자체는 공식적으로 REST API와 Webhook을 쓰는 구조이고 인증은 OAuth나 기본 인증을 선택해야 합니다. 문제는 그 다음입니다.</p>
+      <ul>
+        <li><strong>계정 연결</strong> — 채팅 사용자와 Atlassian 사용자를 1대1로 연결하고 OAuth 2.0 토큰을 저장·갱신하는 흐름을 만들어야 합니다. Atlassian도 OAuth가 기본 인증보다 구현 작업은 많지만 더 안전하다고 안내합니다.</li>
+        <li><strong>프로젝트마다 다른 Jira 구조</strong> — 이슈 타입, 필수 필드, 커스텀 필드, 상태 전이 규칙이 프로젝트마다 다릅니다. "이슈 생성 폼 하나"가 아니라 프로젝트별 필드 조회를 동적으로 해야 합니다.</li>
+        <li><strong>서식 변환</strong> — 채팅 메시지와 Jira 설명·댓글의 서식 체계가 다릅니다. 표, 멘션, 첨부파일, 코드 블록을 양쪽으로 변환하는 층이 필요합니다.</li>
+        <li><strong>권한 누수 방지</strong> — 비공개 Jira 이슈의 내용이 공개 채널 알림으로 새지 않게, 보는 사람의 Jira 권한을 기준으로 알림 내용을 걸러야 합니다. 연동에서 가장 실수하기 쉬운 부분입니다.</li>
+        <li><strong>Webhook 운영</strong> — 중복 발송, 재시도, 순서 뒤바뀜, 서명 검증, 죽은 구독 정리를 처리해야 합니다.</li>
+        <li><strong>Atlassian 쪽 변경 대응</strong> — API 버전, Cloud와 Server/Data Center의 차이, 인증 정책 변경이 생길 때마다 연동 코드도 따라 고쳐야 합니다. 채팅 본체 유지보수에 연동 유지보수가 얹히는 구조입니다.</li>
+      </ul>
+      <div class="common-box">
+        <strong>정리.</strong> Jira 연동이 핵심 요구사항이면 B가 강하게 유리합니다. 알림, 구독, 이슈 생성, 상태 변경까지 검증된 플러그인을 설치만으로 얻고 유지보수는 플러그인 제공 쪽이 맡습니다. Confluence 연동이 핵심이면 격차가 좁혀집니다. 알림 수준이면 B로 충분하지만, 채팅 안에서 페이지를 검색·인용·생성하는 깊은 연동이 필요하면 어느 쪽을 골라도 직접 개발이 필요합니다. 현실적인 절충안은 B 위에서 플러그인만 손보는 것으로, Mattermost의 Jira·Confluence 플러그인은 소스가 공개돼 있어 부족한 부분만 고쳐 쓸 수 있습니다. 한 줄로 요약하면, <strong>Jira는 "이미 잘 만들어진 연동을 공짜로 얻느냐, 비싸게 다시 만드느냐"의 문제이고, Confluence는 "알림까지만 얻고 나머지는 직접 만드느냐"의 문제</strong>입니다.
+      </div>
+
+      </section>
+
+      <section class="tab-panel" id="panel-gap" role="tabpanel" aria-labelledby="tab-gap" tabindex="0" hidden>
+      <h2>Slack이 앞서는 부분, Mattermost로 극복하기</h2>
+      <p class="sub">Slack이 앞서는 부분은 대부분 Mattermost에서 대체 수단이 있긴 합니다. 다만 공짜로 되는 건 아니고, 항목마다 극복 비용과 끝까지 남는 격차가 다릅니다.</p>
+
+      <p class="scroll-hint" aria-hidden="true">↔ 좌우로 밀어 표 전체를 볼 수 있습니다</p>
+      <div class="plans-wrap">
+        <div class="plans-title">극복 방법 총표</div>
+        <div class="tbl gap" role="table" aria-label="Slack 우위 항목의 Mattermost 극복 방법 표">
+          <div class="tbl-row tbl-head"><div class="t-label">Slack이 앞서는 부분</div><div class="t-cell">Mattermost에서의 극복법</div><div class="t-cell">난이도</div><div class="t-cell">끝까지 남는 격차</div></div>
+          <div class="tbl-row"><div class="t-label">앱 생태계 규모</div><div class="t-cell">주요 도구는 공식 플러그인 + Slack 호환 Webhook + n8n 같은 자동화 도구로 메우기</div><div class="t-cell"><span class="level low">낮음-중간</span></div><div class="t-cell">틈새 서비스의 전용 앱은 없음</div></div>
+          <div class="tbl-row"><div class="t-label">Huddles (즉석 음성·영상)</div><div class="t-cell">Calls 플러그인, 또는 Zoom·Teams 등 화상 연동</div><div class="t-cell"><span class="level low">낮음</span></div><div class="t-cell">즉석으로 가볍게 켜는 감각은 Slack이 매끄러움</div></div>
+          <div class="tbl-row"><div class="t-label">Workflow Builder</div><div class="t-cell">Playbooks + n8n·Zapier·Make로 대체</div><div class="t-cell"><span class="level">중간</span></div><div class="t-cell">비개발자가 안에서 바로 만드는 편의성은 떨어짐</div></div>
+          <div class="tbl-row"><div class="t-label">Slack AI</div><div class="t-cell">Agents 플러그인에 원하는 LLM을 직접 연결 (BYO 방식)</div><div class="t-cell"><span class="level">중간</span></div><div class="t-cell">설치가 0인 Slack AI와 달리 초기 세팅이 필요</div></div>
+          <div class="tbl-row"><div class="t-label">Slack Connect (외부 협업)</div><div class="t-cell">Shared Channels, 게스트 계정</div><div class="t-cell"><span class="level high">높음</span></div><div class="t-cell">상대가 Slack만 쓰면 대체 불가에 가까움</div></div>
+          <div class="tbl-row"><div class="t-label">Canvas·Lists (문서·목록)</div><div class="t-cell">Boards, Playbooks 체크리스트, 외부 문서 도구 연동</div><div class="t-cell"><span class="level">중간</span></div><div class="t-cell">채팅 안 실시간 공동 편집은 약함</div></div>
+          <div class="tbl-row"><div class="t-label">운영 없는 SaaS 편의성</div><div class="t-cell">Mattermost Cloud(관리형) 또는 자동화된 자체 운영</div><div class="t-cell">비용으로 해결</div><div class="t-cell">무료 자체 호스팅에서는 운영 부담이 남음</div></div>
+          <div class="tbl-row"><div class="t-label">UX 완성도·익숙함</div><div class="t-cell">Slack 가져오기 도구로 기록 이전, 비슷한 채널·스레드 구조</div><div class="t-cell"><span class="level low">낮음</span></div><div class="t-cell">세부 완성도는 단기간에 못 따라감</div></div>
+        </div>
+      </div>
+
+      <h3 style="margin: 22px 0 8px;">앱 생태계 — 생각보다 잘 메워집니다</h3>
+      <p style="font-size:14.5px;">Mattermost 공식 마이그레이션 문서도 이 부분을 정면으로 다루는데, Jira, GitHub, GitLab, Zoom 같은 주요 연동은 코딩 없이 설치하는 기성 플러그인으로 제공됩니다. 결정적인 장점이 하나 있는데, <strong>들어오는 Webhook 형식이 Slack과 호환</strong>됩니다. 외부 서비스가 Slack 알림을 지원하면 주소만 Mattermost 것으로 바꿔도 그대로 동작하는 경우가 많습니다. 남는 틈새는 자동화 도구로 메웁니다. Mattermost 공식 연동 가이드는 n8n, Zapier, Make가 수천 개 도구와 연결해 주고, Slack Workflow Builder로 만들던 자동화를 Mattermost에서 재현하는 용도로 쓸 수 있다고 안내합니다. 그래도 특정 SaaS가 "Slack 전용 앱"만 내놓은 경우엔 직접 플러그인을 만들어야 하고, 이 롱테일이 생태계 격차의 실체입니다.</p>
+
+      <h3 style="margin: 22px 0 8px;">Huddles — 기능은 되는데 감각이 다릅니다</h3>
+      <p style="font-size:14.5px;">Mattermost Calls가 음성 통화와 화면 공유를 담당하고, 영상이 필요하면 Zoom, Microsoft Teams, Webex 같은 화상회의 연동을 채널에서 바로 시작하는 방식이 공식 대안입니다. 단, 그룹 통화 같은 일부 Calls 기능은 유료판에서 열리는 구조라 무료판만으로는 Huddles를 완전히 대체하기 어렵습니다.</p>
+
+      <h3 style="margin: 22px 0 8px;">Workflow Builder — Playbooks + 외부 자동화의 조합</h3>
+      <p style="font-size:14.5px;">공식 대응표에서 Slack의 Workflow Builder에 대응하는 것으로 노코드 자동화 연동과 Playbooks의 조합을 제시합니다. Playbooks는 체크리스트형 반복 업무(장애 대응, 온보딩 등)에 강하고, 폼 제출이나 승인 같은 일반 자동화는 n8n 쪽이 맡는 분담입니다. 대가는 자동화 도구가 하나 더 늘어서, 그 도구 자체도 운영·학습 대상이 된다는 점입니다.</p>
+
+      <h3 style="margin: 22px 0 8px;">Slack AI — 오히려 역전 가능한 항목</h3>
+      <p style="font-size:14.5px;">공식 대응표에서 Slack AI의 counterpart는 자기 인프라 안에 원하는 LLM을 가져와 붙이는 Sovereign AI(Agents)입니다. 스레드 요약, 질의응답, 검색을 로컬 모델이나 원하는 클라우드 모델로 돌릴 수 있어 데이터 통제 면에서는 Slack AI보다 유리합니다. 격차는 품질이 아니라 시작 비용입니다. Slack AI는 켜면 바로 되지만, Mattermost는 모델 선택과 연결을 직접 해야 합니다.</p>
+
+      <h3 style="margin: 22px 0 8px;">Slack Connect — 기술로 못 메우는 유일한 항목</h3>
+      <p style="font-size:14.5px;">Mattermost에도 서로 다른 Mattermost 서버끼리 채널을 공유하는 Shared Channels와 게스트 계정이 있어 조직 간 협업 자체는 가능합니다. 하지만 Slack Connect의 힘은 기능이 아니라 <strong>상대 회사도 이미 Slack을 쓰고 있다는 네트워크 효과</strong>입니다. 상대가 Mattermost 서버에 초대받아 들어와야 하는 마찰은 어떤 플러그인으로도 없앨 수 없습니다. 이 항목이 도입 결정에서 중요하면, 그게 Slack을 고르는 가장 강한 이유가 됩니다.</p>
+
+      <h3 style="margin: 22px 0 8px;">운영 편의성과 UX</h3>
+      <p style="font-size:14.5px;">자체 호스팅의 운영 부담은 Mattermost Cloud 같은 관리형을 쓰면 Slack처럼 사라지지만, 그 순간 자체 호스팅의 비용 이점이 줄어듭니다. 중간 지대는 Kubernetes 운영 도구와 자동 백업·업데이트 절차로 운영을 정형화하는 것입니다. 모바일 푸시도 비슷한데, 무료판의 테스트 푸시와 유료판의 전용 푸시 서비스(HPNS) 사이에 품질 차이가 있어 푸시 안정성이 중요하면 유료 요인이 됩니다. UX 쪽은 채널·스레드 모델 자체가 비슷하고 공식 가져오기 도구로 사용자와 채널, 메시지 기록, 스레드, 파일까지 옮길 수 있어 이전 마찰은 낮습니다. 다만 버튼 위치 같은 세부 완성도와 "다들 이미 쓸 줄 안다"는 익숙함은 시간이 해결할 문제이지 설정으로 해결할 문제가 아닙니다.</p>
+
+      <h3 style="margin: 22px 0 8px;">극복 전략의 순서</h3>
+      <div class="steps">
+        <div class="step"><span class="num">1</span><p><strong>기성 플러그인으로 70~80%를 메웁니다</strong>Jira, GitHub 같은 핵심 연동은 이미 있습니다.</p></div>
+        <div class="step"><span class="num">2</span><p><strong>롱테일은 Webhook과 n8n 같은 접착 도구로 연결합니다</strong>직접 개발은 여기서도 하지 않습니다.</p></div>
+        <div class="step"><span class="num">3</span><p><strong>정말 필요한 차별점만 전용 플러그인을 개발합니다</strong>코어 포크는 이 단계에서도 피합니다.</p></div>
+        <div class="step"><span class="num">4</span><p><strong>받아들일 건 받아들입니다</strong>네트워크 효과(Connect), 마켓플레이스 절대량, 완전한 무운영은 Mattermost로 완전히 극복되지 않습니다. 이 셋이 핵심 요구사항이면 Slack이 정답이고, 반대로 데이터 통제와 비용이 핵심이면 나머지 격차는 위 1~3단계로 실용 수준까지 좁혀집니다.</p></div>
+      </div>
+
+      </section>
+
+      <section class="tab-panel" id="panel-terms" role="tabpanel" aria-labelledby="tab-terms" tabindex="0" hidden>
+      <h2>용어 풀이</h2>
+      <p class="sub">두 비교 모두에 나오는 공통 용어입니다.</p>
+      <div class="terms">
+        <div class="term">
+          <h3>자체 호스팅 (Self-hosting)</h3>
+          <p><span class="direct">직접적인 뜻: 스스로 서버를 운영한다</span>남의 클라우드에 맡기지 않고, 내 컴퓨터나 내 클라우드 서버에 프로그램을 직접 설치해서 돌리는 방식입니다.</p>
+        </div>
+        <div class="term">
+          <h3>SSO (Single Sign-On)</h3>
+          <p><span class="direct">직접적인 뜻: 한 번 로그인으로 여러 서비스 접속</span>"Google 계정으로 로그인"처럼, 회사 계정 하나로 메신저까지 들어가는 통합 로그인 기능입니다.</p>
+        </div>
+        <div class="term">
+          <h3>봇 계정 (Bot Account)</h3>
+          <p><span class="direct">직접적인 뜻: 프로그램 전용 계정</span>사람이 비밀번호로 로그인하는 계정과 분리된, 프로그램이 토큰 하나로 메시지를 읽고 쓰는 신분증 같은 계정입니다.</p>
+        </div>
+        <div class="term">
+          <h3>Bearer 토큰</h3>
+          <p><span class="direct">직접적인 뜻: 소지한 사람이 주인으로 인정받는 토큰</span>이 문자열을 요청 헤더에 넣어 보내면 서버가 "그 봇이구나" 하고 알아보는 열쇠입니다. 그래서 유출되면 계정을 탈취당한 것과 같습니다.</p>
+        </div>
+        <div class="term">
+          <h3>포크 (Fork)</h3>
+          <p><span class="direct">직접적인 뜻: 갈라져 나온 복사본</span>오픈소스 코드를 통째로 복사해 와서 독립적으로 고쳐 나가는 방식입니다. 원본과 갈라지는 순간부터 업데이트를 합치는 일이 전부 본인 몫이 됩니다.</p>
+        </div>
+        <div class="term">
+          <h3>팬아웃 (Fan-out)</h3>
+          <p><span class="direct">직접적인 뜻: 부채처럼 퍼져 나간다</span>메시지 1개를 채널에 있는 수백 명에게 동시에 뿌리는 작업을 말하며, 채팅 서버에서 가장 부하가 큰 부분 중 하나입니다.</p>
+        </div>
+        <div class="term">
+          <h3>TCO (총소유비용)</h3>
+          <p><span class="direct">직접적인 뜻: 사는 값만이 아니라 유지하는 값까지 합친 전체 비용</span>도입 가격만 보면 싸 보이는 선택도, 운영·유지 인력까지 합치면 비싸질 수 있어 이 기준으로 비교합니다.</p>
+        </div>
+        <div class="term">
+          <h3>Webhook (웹훅)</h3>
+          <p><span class="direct">직접적인 뜻: 사건이 생기면 상대 서버로 바로 알려주는 갈고리</span>Jira에서 이슈가 생성되면 그 순간 채팅 서버로 신호를 보내 알림을 띄우는 방식입니다.</p>
+        </div>
+        <div class="term">
+          <h3>JQL</h3>
+          <p><span class="direct">직접적인 뜻: Jira 전용 검색 언어</span>SQL처럼 조건을 써서 원하는 이슈만 골라내는 문법입니다. Confluence 쪽에는 비슷한 역할로 CQL이 있습니다.</p>
+        </div>
+        <div class="term">
+          <h3>양방향 연동</h3>
+          <p><span class="direct">직접적인 뜻: 양쪽에서 서로를 조작할 수 있다</span>알림만 받는 건 단방향, 채팅에서 이슈를 만들고 상태를 바꾸는 것까지 되면 양방향입니다.</p>
+        </div>
+        <div class="term">
+          <h3>롱테일 (Long Tail)</h3>
+          <p><span class="direct">직접적인 뜻: 긴 꼬리</span>사용 빈도는 낮지만 종류는 엄청나게 많은 틈새 기능·연동들을 묶어 부르는 말로, 생태계 경쟁에서 보통 이 부분이 승부를 가릅니다.</p>
+        </div>
+        <div class="term">
+          <h3>BYO LLM (Bring Your Own LLM)</h3>
+          <p><span class="direct">직접적인 뜻: 쓸 인공지능 모델은 직접 가져온다</span>플랫폼이 정해준 모델을 쓰는 게 아니라, 원하는 모델을 골라 연결해서 쓰는 구조입니다.</p>
+        </div>
+        <div class="term">
+          <h3>Shared Channels</h3>
+          <p><span class="direct">직접적인 뜻: 서로 다른 서버가 함께 쓰는 공유 채널</span>조직마다 서버가 따로 있어도 특정 채널만 연결해 한 공간처럼 대화하는 기능입니다.</p>
+        </div>
+      </div>
+      </section>
+
+      <footer>
+        <p>가격과 플랜 구성은 2026년 11월 27일 확인 기준이며, 두 서비스 모두 요금 정책을 수시로 바꾸므로 도입 전 공식 페이지에서 재확인이 필요합니다. Mattermost 유료 플랜은 현재 견적형 판매로 전환 중이라 실제 계약가는 조건에 따라 달라질 수 있습니다.</p>
+        <p style="margin-bottom:6px;"><strong>출처</strong></p>
+        <ul>
+          <li><a href="https://join.slack.com/pricing" target="_blank" rel="noopener">Slack 공식 요금 페이지</a></li>
+          <li><a href="https://www.activepieces.com/blog/mattermost-pricing-plans-costs-free-tier-2026" target="_blank" rel="noopener">Mattermost 요금 분석 (Activepieces, 2026)</a></li>
+          <li><a href="https://bstackradar.com/tools/mattermost" target="_blank" rel="noopener">Mattermost 리뷰·요금 정리 (BStack Radar, 2026)</a></li>
+        </ul>
+      </footer>
+    </div>
+
+    <script>
+      (function () {
+        var slider = document.getElementById('teamSize');
+        var label = document.getElementById('countLabel');
+        var fmt = function (n) { return '$' + n.toLocaleString('en-US'); };
+        function update() {
+          var n = parseInt(slider.value, 10);
+          label.textContent = n;
+          document.getElementById('costSlackPro').textContent = fmt(n * 7.25 * 12);
+          document.getElementById('costSlackBiz').textContent = fmt(n * 15 * 12);
+          document.getElementById('costMmPro').textContent = fmt(n * 10 * 12);
+        }
+        slider.addEventListener('input', update);
+        update();
+      })();
+
+      (function () {
+        var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab-btn'));
+        var bar = document.querySelector('.tabbar');
+        function activate(tab, focus) {
+          tabs.forEach(function (t) {
+            var on = t === tab;
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+            t.tabIndex = on ? 0 : -1;
+            document.getElementById(t.getAttribute('data-panel')).hidden = !on;
+          });
+          if (focus) tab.focus();
+          if (bar) {
+            var y = bar.getBoundingClientRect().top + window.pageYOffset;
+            if (window.pageYOffset > y) window.scrollTo(0, y);
+          }
+        }
+        tabs.forEach(function (tab, i) {
+          tab.addEventListener('click', function () { activate(tab, false); });
+          tab.addEventListener('keydown', function (e) {
+            var idx = null;
+            if (e.key === 'ArrowRight') idx = (i + 1) % tabs.length;
+            else if (e.key === 'ArrowLeft') idx = (i - 1 + tabs.length) % tabs.length;
+            else if (e.key === 'Home') idx = 0;
+            else if (e.key === 'End') idx = tabs.length - 1;
+            if (idx !== null) { e.preventDefault(); activate(tabs[idx], true); }
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>
