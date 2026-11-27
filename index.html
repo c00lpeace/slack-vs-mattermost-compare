@@ -180,14 +180,39 @@
       .term p { font-size: 14px; color: var(--ink-2); margin: 0; }
       .term .direct { color: var(--ink-3); font-size: 13px; display: block; margin-bottom: 4px; }
 
-      /* 탭 */
+      /* 탭 — 접이식 고정 바: 접힌 상태에서는 한 줄만 차지 */
       .tabbar {
         position: sticky; top: 0; z-index: 20;
-        display: flex; flex-wrap: wrap; gap: 8px;
-        margin: 26px -20px 4px; padding: 12px 20px;
+        display: flex; flex-direction: column; gap: 0;
+        margin: 26px -20px 4px; padding: 0 20px;
         background: var(--bg);
         border-bottom: 1px solid var(--line);
       }
+      .tabbar-head {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        min-height: 52px; padding: 6px 0; width: 100%;
+      }
+      .tabbar-current { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+      .tabbar-current-kicker { font-size: 12px; font-weight: 700; color: var(--ink-3); white-space: nowrap; }
+      .tabbar-current-name { font-size: 15px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .tabbar-toggle {
+        appearance: none; cursor: pointer; flex: none;
+        display: inline-flex; align-items: center; gap: 6px;
+        border: 1px solid var(--line); border-radius: 999px;
+        background: var(--surface); color: var(--ink);
+        font: inherit; font-size: 13.5px; font-weight: 600;
+        padding: 7px 14px; min-height: 36px; line-height: 1.2;
+      }
+      .tabbar-toggle:hover { border-color: var(--ink-3); }
+      .tabbar-toggle:focus-visible { outline: 2px solid var(--mm); outline-offset: 2px; }
+      .tabbar-toggle .chev { display: inline-block; font-size: 11px; line-height: 1; transition: transform .18s ease; }
+      .tabbar.is-open .tabbar-toggle .chev { transform: rotate(180deg); }
+      @media (prefers-reduced-motion: reduce) { .tabbar-toggle .chev { transition: none; } }
+      .tabbar-body {
+        display: flex; flex-wrap: wrap; gap: 8px;
+        padding: 12px 0 14px; border-top: 1px solid var(--line); width: 100%;
+      }
+      .tabbar:not(.is-open) .tabbar-body { display: none; }
       .tab-btn {
         appearance: none; cursor: pointer;
         border: 1px solid var(--line); border-radius: 999px;
@@ -267,7 +292,18 @@
         <p class="lede">겉보기엔 같은 팀 메신저지만 운영 철학이 정반대입니다. <strong>Slack은 완성형 클라우드 서비스</strong>를 빌려 쓰는 방식이고, <strong>Mattermost는 오픈소스를 내 서버에 직접 설치</strong>하는 방식입니다. 이 차이가 가격, 데이터 통제, 운영 부담의 차이로 이어집니다.</p>
       </header>
 
-      <nav class="tabbar" aria-label="비교 주제 선택">
+      <nav class="tabbar" id="tabbar" aria-label="비교 주제 선택">
+        <div class="tabbar-head">
+          <div class="tabbar-current">
+            <span class="tabbar-current-kicker">현재 탭</span>
+            <span class="tabbar-current-name" id="currentTabName">한눈에 비교</span>
+          </div>
+          <button type="button" class="tabbar-toggle" id="tabbarToggle" aria-expanded="false" aria-controls="tabbarBody">
+            <span class="tabbar-toggle-text" id="tabbarToggleText">메뉴 펼치기</span>
+            <span class="chev" aria-hidden="true">▼</span>
+          </button>
+        </div>
+        <div class="tabbar-body" id="tabbarBody">
         <div class="tab-group">
           <span class="tab-group-label" id="tg-products">Slack vs Mattermost 비교</span>
           <div class="tab-group-btns" role="tablist" aria-labelledby="tg-products">
@@ -291,6 +327,7 @@
           <div class="tab-group-btns" role="tablist" aria-labelledby="tg-common">
             <button type="button" class="tab-btn" role="tab" id="tab-terms" aria-controls="panel-terms" aria-selected="false" tabindex="-1" data-panel="panel-terms">용어 풀이</button>
           </div>
+        </div>
         </div>
       </nav>
 
@@ -793,7 +830,28 @@
 
       (function () {
         var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab-btn'));
-        var bar = document.querySelector('.tabbar');
+        var bar = document.getElementById('tabbar');
+        var toggle = document.getElementById('tabbarToggle');
+        var toggleText = document.getElementById('tabbarToggleText');
+        var currentName = document.getElementById('currentTabName');
+        function setOpen(open) {
+          if (!bar || !toggle) return;
+          bar.classList.toggle('is-open', open);
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          if (toggleText) toggleText.textContent = open ? '메뉴 접기' : '메뉴 펼치기';
+        }
+        function isOpen() { return bar && bar.classList.contains('is-open'); }
+        if (toggle) {
+          toggle.addEventListener('click', function () { setOpen(!isOpen()); });
+          toggle.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && isOpen()) { setOpen(false); }
+          });
+        }
+        if (bar) {
+          bar.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && isOpen()) { setOpen(false); if (toggle) toggle.focus(); }
+          });
+        }
         function activate(tab, focus) {
           tabs.forEach(function (t) {
             var on = t === tab;
@@ -801,7 +859,13 @@
             t.tabIndex = on ? 0 : -1;
             document.getElementById(t.getAttribute('data-panel')).hidden = !on;
           });
-          if (focus) tab.focus();
+          if (currentName) currentName.textContent = tab.textContent.trim();
+          // 탭을 선택하면 자동으로 다시 접는다
+          setOpen(false);
+          if (focus) {
+            // 접힌 뒤에는 선택된 탭이 숨겨지므로 포커스를 펼치기 버튼으로 옮긴다
+            if (toggle) toggle.focus(); else tab.focus();
+          }
           if (bar) {
             var y = bar.getBoundingClientRect().top + window.pageYOffset;
             if (window.pageYOffset > y) window.scrollTo(0, y);
@@ -818,6 +882,10 @@
             if (idx !== null) { e.preventDefault(); activate(tabs[idx], true); }
           });
         });
+        // 초기 상태: 접힘 + 현재 탭 이름 동기화
+        var initial = document.querySelector('.tab-btn[aria-selected="true"]');
+        if (initial && currentName) currentName.textContent = initial.textContent.trim();
+        setOpen(false);
       })();
     </script>
   </body>
